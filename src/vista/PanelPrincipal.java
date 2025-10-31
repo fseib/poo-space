@@ -2,6 +2,8 @@ package vista;
 
 import java.awt.Dimension;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JPanel;
 
@@ -17,6 +19,7 @@ public class PanelPrincipal extends JPanel {
 	private int alto;
 	private ImagenNave imagenNave;
 	private ImagenInvasor imagenInvasor;
+	private List<ProyectilVista> proyectiles  = new ArrayList<>();;
 //	private ControladorJuego controladorJuego;
 	
 	public PanelPrincipal() {
@@ -46,11 +49,38 @@ public class PanelPrincipal extends JPanel {
 					if(e.getKeyChar() == 'd')
 						x = ControladorJuego.getInstancia().moverNaveDerecha();
 				
+				if(e.getKeyChar() == 'w') {
+					int projectileStartX =	ControladorJuego.getInstancia().dispararNave();
+		            
+		            ProyectilVista pro = new ProyectilVista(projectileStartX, true, 1); 
+		            
+
+		            final int PRO_WIDTH = 8;
+		            final int PRO_HEIGHT = 15;
+		            
+		            final int PRO_START_Y = 500 - PRO_HEIGHT; 
+
+		            pro.setBounds(
+		                projectileStartX + 25, // Center the projectile view component on the ship's X
+		                PRO_START_Y, 
+		                PRO_WIDTH, 
+		                PRO_HEIGHT
+		            );
+		            
+		            proyectiles.add(pro);
+		            add(pro);
+		            revalidate(); 
+		            repaint();
+				}
 				imagenNave.mover(x, 500);
 			}
 		});
 	}
 	
+	
+	//El timer recibe un evento con la posicion de todo. Mueve las cosas a donde corresponde y chequea colisiones y cosas etc
+	//Luego si es necesario cambia el estado y redibuja
+
 	class ManejoTecla extends MiPropioKeyAdapter{
 		
 		

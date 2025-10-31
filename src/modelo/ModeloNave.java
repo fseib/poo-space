@@ -31,7 +31,7 @@ public class ModeloNave {
 		return this.coordenadaX;
 	}
 	
-	public int disparar() {
-		return 0;
+	public Proyectiles disparar() {
+		return new Proyectiles(coordenadaX, true, 1);
 	}
 }

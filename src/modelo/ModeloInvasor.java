@@ -30,4 +30,8 @@ public class ModeloInvasor {
 			this.coordenadaX += this.velocidad;
 		return this.coordenadaX;
 	}
+	
+	public int disparar() {
+		return this.coordenadaX;
+	}
 }

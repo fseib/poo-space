@@ -11,7 +11,7 @@ public class Ventana extends JFrame {
 	
 	public Ventana() {
 		panelPrincipal = new PanelPrincipal();
-		panelPrincipal.setBackground(Color.CYAN);
+		panelPrincipal.setBackground(Color.BLACK);
 		setContentPane(panelPrincipal);
 		pack();
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
