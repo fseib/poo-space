@@ -8,10 +8,12 @@ import javax.swing.JLabel;
 public class ProyectilVista extends JLabel {
 
 	private static final long serialVersionUID = 3710860010698029847L;
+	private final int modeloId;
 	private int alto;
 	private int ancho;
 	
-	public ProyectilVista(int x, boolean isPlayer, int velocidad) {
+	public ProyectilVista(int modeloId) {
+		this.modeloId = modeloId;
 		ancho = 8;
 		alto = 15;
 		Image imagen = new ImageIcon("disparo.png").getImage();
@@ -19,5 +21,8 @@ public class ProyectilVista extends JLabel {
 		ImageIcon icono = new ImageIcon(imagenAEscala);
 		setIcon(icono);
 	}
-
+	
+	public int getModeloId() {
+		return this.modeloId;
+	}
    }

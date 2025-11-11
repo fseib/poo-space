@@ -12,9 +12,9 @@ public class ImagenNave extends JLabel {
 	private int ancho;
 	
 	public ImagenNave() {
-		ancho = 50;
-		alto = 50;
-		Image imagen = new ImageIcon("Top.png").getImage();
+		ancho = 60;
+		alto = 30;
+		Image imagen = new ImageIcon("player.png").getImage();
 		Image imagenAEscala = imagen.getScaledInstance(ancho, alto, Image.SCALE_SMOOTH);
 		ImageIcon icono = new ImageIcon(imagenAEscala);
 		setIcon(icono);
