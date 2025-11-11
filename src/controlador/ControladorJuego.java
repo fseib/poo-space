@@ -16,7 +16,6 @@ import modelo.Oleada;
 import modelo.Proyectiles;
 import vista.PanelHUD;
 import vista.PanelPrincipal;
-import vista.ProyectilVista;
 
 public class ControladorJuego implements ActionListener {
 
@@ -35,7 +34,7 @@ public class ControladorJuego implements ActionListener {
 	private List<Proyectiles> proyectiles = new ArrayList<>();
 	private Oleada oleada;
 	private MuroEnergia muro;
-private final int BASE_VELOCIDAD_INVADER = 15;
+	
 	private final int COOLDOWN_TICKS = 18; // Shoot once every 15 game ticks (~250ms at 66 FPS)
 	private int ticksSinceLastShot = 0;
 	
@@ -50,7 +49,8 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 
 	private final double BASE_PIXELS_HORIZONTAL = 6.0; // Use doubles for accurate scaling
 	private final double BASE_PIXELS_CAIDA = 20.0;
-
+	private final int PAUSA_VIDA_PERDIDA = 100; // Total pause duration (1 second)
+	private boolean shipFlashState = false; // NEW: Controls the ship's current icon (blue/white)
 	public void setVista(PanelPrincipal panel) { 
 	    this.vistaPanel = panel;
 	}
@@ -59,14 +59,23 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	    return screenFlash;
 	}
 	
+	public boolean isShipFlashing() {
+	    return shipFlashState;
+	}
+	
 	public ControladorJuego() {
 		this.puntaje = 0;
 		this.nivel = 1;
 		this.vidas = 3;
-		this.dificultad = "FACIL";
+		this.dificultad = "NORMAL";
 		
 		areaJuego = new AreaDeJuego(600,800);
-		modeloNave = new ModeloNave(400,300,getVelocidad(),60,30,areaJuego);
+		
+		int SHIP_WIDTH = 60;
+	    int SCREEN_CENTER_X = 400;
+	    
+		int MODEL_START_X = SCREEN_CENTER_X - (SHIP_WIDTH / 2); // 400 - 30 = 370
+		modeloNave = new ModeloNave(MODEL_START_X,500,getVelocidad(),60,30,areaJuego);
 
 		
 		int hSpeed = getVelocidadHorizontal();
@@ -82,21 +91,21 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	    this.vistaHUD = hud;
 	}
 
-	private void actualizarPuntajeYVidas() {
+	private void actualizarHUD() {
 	    if (vistaHUD != null) {
 	        vistaHUD.actualizarHUD(puntaje, vidas, nivel); 
 	    }
 	}
 	
 	public static ControladorJuego getInstancia() {
-	    // Check 1: If it's null, create it.
 	    if (instancia == null) {
-	        // To prevent recursion, set the instance immediately
-	        // so that the recursive call (if it happens) sees a non-null value.
 	        instancia = new ControladorJuego(); 
 	    }
-	    // Check 2: Now that it's constructed (or being constructed), return it.
 	    return instancia;
+	}
+	
+	public List<Proyectiles> getProyectiles() {
+		return this.proyectiles;
 	}
 	
 	public Proyectiles getProyectilById(int id) {
@@ -108,6 +117,9 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	    return null;
 	}
 	
+	public ModeloNave getModeloNave() {
+		return this.modeloNave;
+	}
 	@Override
 	public void actionPerformed(ActionEvent e) {
 	    if (this.estado != null && this.estado.equals("JUGANDO")) {
@@ -117,13 +129,16 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	        actualizarProyectiles(); 
 	        oleada.actualizarMovimiento();
 	        
+	        Proyectiles enemigoProyectil = oleada.intentarDispararEnemigo(getDifficultyFactor());
+	        if (enemigoProyectil != null) {
+	            proyectiles.add(enemigoProyectil); // Add the new enemy shot to the master list
+	        }
+	        
 	        // --- 2. COLLISION CHECK ---
 	        
 	        verificarTodasLasColisiones();
-	        
 	        verificarEstadoDelJuego();
-
-	        actualizarPuntajeYVidas();
+	        actualizarHUD();
 	        
 	        // --- 3. REDIBUJADO ---
 
@@ -157,6 +172,30 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	    		aumentarNivel();
 	    	}
 	    }
+	    else if (this.estado != null && this.estado.equals("VIDA_PERDIDA")) {
+	        pausaContador++;
+	        
+	        
+	        if (pausaContador % 5 == 0) { // Toggle ON/OFF rapidly
+	            this.shipFlashState = !this.shipFlashState;
+	        }
+	        
+	        if (vistaPanel != null) { 
+	            // We call the full update to ensure the ship component is redrawn immediately.
+	            vistaPanel.actualizarVista(); 
+	        }
+
+	        if (pausaContador >= PAUSA_VIDA_PERDIDA) {
+	        	limpiarModeloProyectiles();
+	        	vistaPanel.limpiarProyectiles();
+	            this.shipFlashState = false; // Ensure ship returns to normal state
+	            this.estado = "JUGANDO"; // Resume the game loop
+	        }
+	    }
+	}
+	
+	private void limpiarModeloProyectiles() {
+	    this.proyectiles.clear();
 	}
 	
 	public void actualizarProyectiles() {
@@ -211,13 +250,16 @@ private final int BASE_VELOCIDAD_INVADER = 15;
     }
 	
 	public void iniciarJuego() {
-	    if (!gameTimer.isRunning()) {
-	        gameTimer.start();
+		if (!gameTimer.isRunning()) {
 	        this.estado = "JUGANDO";
 	        
+	        // 1. GUARANTEE ALL VISUALS ARE CREATED FIRST
 	        if (vistaPanel != null) {
-	        	vistaPanel.inicializarVistaDeInvasores();
+	            vistaPanel.inicializarVistaDeInvasores(); // BLOCKING CALL: Guarantees invaders/views are ready.
 	        }
+	        
+	        // 2. ONLY START THE TIMER AFTER THE VIEW IS READY
+	        gameTimer.start(); // Timer starts TICKING NOW that all models/views are built.
 	    }
 	}
 	
@@ -234,7 +276,7 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	    
 
 	    if (vistaPanel != null) {
-	        actualizarPuntajeYVidas();
+	    	actualizarHUD();
 
 	        vistaPanel.limpiarVista(); // We will add this method to remove ALL components
 	        vistaPanel.inicializarVistaDeInvasores(); // Recreate the visual invader components
@@ -257,22 +299,7 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	
 	public int getVelocidadHorizontal() {
 	    // 1. Calculate the difficulty and level factor
-	    double difficultyFactor = 1.0;
-	    
-	    String currentDificultad = (dificultad != null) ? dificultad : "NORMAL";	
-	    if (currentDificultad != null) {
-	        switch (currentDificultad.toUpperCase()) {
-	            case "FACIL": 
-	                difficultyFactor = 0.8;
-	                break;
-	            case "DIFICIL": 
-	                difficultyFactor = 1.5;
-	                break;
-	            default:
-	                difficultyFactor = 1.0;
-	                break;
-	        }
-	    }
+	    double difficultyFactor = getDifficultyFactor();
 	    
 	    // Level scaling: 10% increase per level beyond 1
 	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.13;
@@ -286,7 +313,7 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 
 	public int getVelocidadCaida() {
 	    // The drop speed should use the same factors
-	    double difficultyFactor = 1.0;
+	    double difficultyFactor = getDifficultyFactor();
 	    // ... (same difficulty factor calculation as above) ...
 	    
 	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.12;
@@ -296,7 +323,71 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	    return Math.max(1, (int) Math.round(finalDrop));
 	}
 	
+	private double getDifficultyFactor() {
+
+		   String currentDificultad = (dificultad != null) ? dificultad : "NORMAL";	
+		    if (currentDificultad != null) {
+		        switch (currentDificultad.toUpperCase()) {
+		            case "FACIL": 
+		                return 0.5;
+		            case "DIFICIL": 
+		                return 1.4;
+		                
+		            default:
+		                return 0.8;
+		        }
+		    }
+		    
+		    return 0.8;
+	}
+	
 	public void verificarTodasLasColisiones() {
+			
+		checkColisionEntreProyectiles();
+		
+		checkColisionDeEnemigos();
+		
+		checkColisionDeJugador();
+	    
+	}
+	
+	private void checkColisionEntreProyectiles() {
+	List<Proyectiles> shots = new ArrayList<>(proyectiles);
+	    
+	    for (int i = 0; i < shots.size(); i++) {
+	        Proyectiles projA = shots.get(i);
+	        
+	        if (!projA.isActivo()) continue;
+	        
+	        for (int j = i + 1; j < shots.size(); j++) {
+	            Proyectiles projB = shots.get(j);
+	            
+	            if (!projB.isActivo()) continue;
+	            
+	            // OPTIONAL: Check if projA is player and projB is enemy (or vice-versa)
+	             if (projA.esDelJugador() == projB.esDelJugador()) continue; // Ignore same-side shots
+
+	            // Use the same collision checker. APPLY OFFSETS CAREFULLY!
+	            // Assuming player projectile uses +30 offset, enemy projectile uses 0 offset.
+	            
+	            int projAX = projA.getX() + (projA.esDelJugador() ? 30 : 0); 
+	            int projBX = projB.getX() + (projB.esDelJugador() ? 30 : 0);
+
+	            if (haColisionado(projAX, projA.getY(), projA.getAncho(), projA.getAlto(),
+	                              projBX, projB.getY(), projB.getAncho(), projB.getAlto())) {
+	                
+	                // Collision detected: Deactivate both projectiles.
+	                projA.desactivar();
+	                projB.desactivar();
+	                // Break inner loop and move to the next projA
+	                break; 
+	            }
+	        }
+	    }
+	}
+	
+	private void checkColisionDeEnemigos() {
+		
 	    List<ModeloInvasor> invasoresActivos = oleada.getInvasoresActivos(); 
 	    
 	    for (Proyectiles projectile : new ArrayList<>(proyectiles)) {
@@ -305,13 +396,13 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	            for (ModeloInvasor invader : new ArrayList<>(invasoresActivos)) {
 	                if (invader.isActivo()) {
 	                    
-	                    if (haColisionado(projectile.getX() + 30, projectile.getY(), projectile.getAncho(), projectile.getAlto(), invader.getX(), invader.getY(), invader.getAncho(), invader.getAlto())) {	                        
+	                    if (haColisionado(projectile.getX() + 30, projectile.getY(), projectile.getAncho(), projectile.getAlto(), invader.getX(), invader.getY(), invader.getAncho(), invader.getAlto())  && projectile.esDelJugador()) {	                        
 	                        projectile.desactivar(); 
 	                        invader.destruir();      
 	                        	                        
 	                        puntaje += invader.getScore(); 
 	                        
-	                        actualizarPuntajeYVidas(); 
+	                        actualizarHUD(); 
 	                        
 	                        break; 
 	                    }
@@ -320,6 +411,49 @@ private final int BASE_VELOCIDAD_INVADER = 15;
 	        }
 	    }
 	    
+		
+	}
+	
+	public void setDificultad(String newDificultad) {
+	    this.dificultad = newDificultad;
+	}
+	
+	
+	private void checkColisionDeJugador() {
+		   for (Proyectiles projectile : new ArrayList<>(proyectiles)) {
+		        // Assuming you can identify enemy shots (e.g., if projectile.esDelJuegador() == false)
+		        if (projectile.isActivo() && !projectile.esDelJugador() ) { 
+		            
+		            // 1. Check vs. Player's Ship
+		            if (haColisionado(projectile.getX() + 30, projectile.getY(), projectile.getAncho(), projectile.getAlto(),
+		                              modeloNave.getX(), modeloNave.getY(), modeloNave.getAncho(), modeloNave.getAlto())) {
+		                
+		                projectile.desactivar(); // Destroy the enemy projectile
+		                vidas--;                 // Player takes damage
+		                
+		                // You must update the ship's state (e.g., flash, temporary invulnerability)
+		                // modeloNave.hit();
+		                
+		                actualizarHUD();
+		                this.estado = "VIDA_PERDIDA"; // <-- NEW STATE
+		                pausaContador = 0;
+		                
+		                // Check if the game is over
+		                if (vidas <= 0) {
+		                    this.estado = "GAME_OVER";
+		                }
+		                
+		                // Later: Add logic to check if vidas <= 0 for GAME_OVER state
+		            }
+		            
+		            // 2. Check vs. Shields (MuroEnergia)
+		            /*
+		            if (muro != null && muro.checkCollision(projectile)) {
+		                projectile.desactivar();
+		            }
+		            */
+		        }
+		    }
 	}
 	
 	private boolean haColisionado(int x1, int y1, int w1, int h1, 

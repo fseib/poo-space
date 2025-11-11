@@ -6,10 +6,8 @@ public class ModeloInvasor {
 	private static int nextId = 0;
 	private int coordenadaX;
 	private int coordenadaY;
-	private int velocidad;
 	private int ancho;
 	private int alto;
-	private AreaDeJuego areaJuego;
     
     private final int invaderType; 
     private final int score;
@@ -17,14 +15,12 @@ public class ModeloInvasor {
     private boolean activo;       
 	
 	
-	public ModeloInvasor(int coordenadaX, int coordenadaY, int velocidad,  AreaDeJuego areaJuego, int type, int row) {
+	public ModeloInvasor(int coordenadaX, int coordenadaY,  int type, int row) {
 		this.id = nextId++; // Assign ID
 		this.coordenadaX = coordenadaX;
 		this.coordenadaY = coordenadaY;
 		this.ancho = 40;
 		this.alto = 32;
-		this.velocidad = velocidad;
-		this.areaJuego = areaJuego;
         this.invaderType = type;
         this.row = row;        
         this.activo = true;     
@@ -51,16 +47,41 @@ public class ModeloInvasor {
         this.activo = false;
     }
 
-	public int getId() { return id; }
-    public int getInvaderType() { return invaderType; }
-    public int getRow() { return row; }
-    public boolean isActivo() { return activo; }
+	public int getId() { 
+		return id; 
+	}
+	
+    public int getInvaderType() { 
+    	return invaderType; 
+    }
     
-    public int getX() { return coordenadaX; }
-    public int getY() { return coordenadaY; }
-    public int getAncho() { return ancho; } 
-    public int getAlto() { return alto; }   
-    public int getScore() {return score;}
+    public int getRow() { 
+    	return row; 
+    }
+    
+    public boolean isActivo() { 
+    	return activo; 
+    }
+    
+    public int getX() { 
+    	return coordenadaX; 
+    }
+    
+    public int getY() { 
+    	return coordenadaY; 
+    }
+    
+    public int getAncho() { 
+    	return ancho; 
+    } 
+    
+    public int getAlto() { 
+    	return alto; 
+    }   
+    
+    public int getScore() {
+    	return score;
+    }
     
 	public int disparar() {
 		return this.coordenadaX;

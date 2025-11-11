@@ -2,16 +2,11 @@ package modelo;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import controlador.ControladorJuego;
+import java.util.Random;
 
 public class Oleada {
 
 	private List<ModeloInvasor> naves = new ArrayList<>(); // <--- Corrected initialization
-	private String direccion;
-	private int velociadadActual;
-	private int limiteIzquierdo;
-	private int limiteDerecho;
     
     private final int totalFilas = 5;     
     private final int totalColumnas = 10; 
@@ -25,6 +20,8 @@ public class Oleada {
     private int[] fasesPorFila;             
 
     private AreaDeJuego areaDeJuego; 
+    
+    private final Random random = new Random(); // Initialize the random generator
 
     public Oleada(AreaDeJuego area, int horizontalSpeed, int dropSpeed) {
         this.areaDeJuego = area;
@@ -56,7 +53,7 @@ public class Oleada {
                 int startY = 50 + r * separacion;
                 
                 ModeloInvasor invasor = new ModeloInvasor(
-                    startX, startY, 1,  areaDeJuego, invaderType, r
+                    startX, startY, invaderType, r
                 );
                 naves.add(invasor);
             }
@@ -114,5 +111,65 @@ public class Oleada {
             if (inv.getId() == id) return inv;
         }
         return null;
+    }
+    
+    public Proyectiles intentarDispararEnemigo(double difficultyFactor) {
+        if (naves.isEmpty()) {
+            return null;
+        }
+        
+        // --- Step 1: GLOBAL CHANCE CHECK (Only runs ONCE per tick) ---
+        
+        // We set a base chance that *any* invader will shoot this frame.
+        // 0.005 (0.5%) means a shot is fired on average once every 200 ticks (approx 3 seconds).
+        final double GLOBAL_BASE_CHANCE = 0.025; 
+        
+        // Total Chance = Base Chance * Difficulty Factor
+        double totalFiringChance = GLOBAL_BASE_CHANCE * difficultyFactor;
+        totalFiringChance = Math.min(totalFiringChance, 1.0); // Cap at 100%
+        
+        // Check if the game should fire a shot this frame.
+        // NOTE: This reverses your original > check to use standard < probability checking.
+        // If random value is less than the total chance, the shot is successful.
+        if (random.nextDouble() < totalFiringChance) { 
+            
+            // --- Step 2: FIND SHOOTER (Only runs if the global chance succeeded) ---
+            
+            ModeloInvasor shooter = null;
+            int maxAttempts = 10;
+            
+            // Loop to find an active invader to be the shooter
+            for (int i = 0; i < maxAttempts; i++) {
+                // Simple approach: Choose a random invader
+                int index = random.nextInt(naves.size());
+                ModeloInvasor candidate = naves.get(index);
+                
+                if (candidate.isActivo()) {
+                    shooter = candidate;
+                    break;
+                }
+            }
+            
+            if (shooter != null) {
+                // Step 3: Create and return the projectile Model object
+                int velocidadEnemiga = 5; 
+                
+                // Calculate precise starting position (centered on invader's body)
+                // Note: I added a small offset to the X coordinate (e.g., -4) to center the 8-wide bullet (8/2=4) 
+                // inside the invader's body, assuming the Model X is the invader's corner.
+                int startX = shooter.getX() + (shooter.getAncho() / 2) - 4; 
+                int startY = shooter.getY() + shooter.getAlto();     
+                            
+                Proyectiles nuevoProyectil = new Proyectiles(
+                    startX, 
+                    startY,
+                    false, // esDelJugador = false
+                    velocidadEnemiga
+                );
+                return nuevoProyectil;
+            }
+        }
+        
+        return null; // No shot fired this tick
     }
 }

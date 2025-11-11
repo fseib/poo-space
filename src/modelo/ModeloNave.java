@@ -19,6 +19,21 @@ public class ModeloNave {
 		this.areaJuego = areaJuego;
 	}
 	
+	public int getX() {
+		return coordenadaX;
+	}
+	
+	public int getY() {
+		return coordenadaY;
+	}
+	
+	public int getAncho() {
+		return ancho;
+	}
+	
+	public int getAlto() {
+		return alto;
+	}
 	public int moverIzquierda() {
 		if(this.coordenadaX - this.velocidad > 0)
 			this.coordenadaX -= this.velocidad;
@@ -32,6 +47,6 @@ public class ModeloNave {
 	}
 	
 	public Proyectiles disparar() {
-		return new Proyectiles(coordenadaX, true, this.velocidad);
+		return new Proyectiles(coordenadaX, coordenadaY, true, this.velocidad);
 	}
 }

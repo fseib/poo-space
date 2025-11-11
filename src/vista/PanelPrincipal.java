@@ -26,6 +26,9 @@ public class PanelPrincipal extends JPanel {
 	private List<ProyectilVista> proyectiles  = new ArrayList<>();;
 	private List<ImagenInvasor> invasoresVista = new ArrayList<>();
 	
+	  final int PRO_WIDTH = 8;
+      final int PRO_HEIGHT = 15;
+      
 	@Override
 	protected void paintComponent(Graphics g) {
 	    super.paintComponent(g); // Draws black background, then components draw themselves.
@@ -43,7 +46,8 @@ public class PanelPrincipal extends JPanel {
 		setPreferredSize(new Dimension(ancho,alto));
 		imagenNave = new ImagenNave();
 		add(imagenNave);
-		imagenNave.mover(400,500);
+		int shipModelX = ControladorJuego.getInstancia().getModeloNave().getX(); // Assuming you add this getter
+		imagenNave.mover(shipModelX, 500);
 		imagenNave.setFocusable(true);
 	    ControladorJuego.getInstancia().setVista(this); 
 	    ControladorJuego.getInstancia().iniciarJuego();
@@ -72,7 +76,6 @@ public class PanelPrincipal extends JPanel {
 				            final int PRO_HEIGHT = 15;
 					        final int SHIP_WIDTH_OFFSET = 30; 
 
-				            final int PRO_START_Y = 500 - PRO_HEIGHT; 
 
 				            pro.setBounds(
 				                    modeloInicial.getX() + SHIP_WIDTH_OFFSET,
@@ -112,7 +115,19 @@ public class PanelPrincipal extends JPanel {
 	    repaint();
 	}
 	
+	public void limpiarProyectiles() {
+	    for (ProyectilVista pv : proyectiles) {
+	        remove(pv);
+	    }
+	    proyectiles.clear();
+	    
+	    revalidate(); 
+	    repaint();
+	}
 	
+	public ImagenNave getImagenNave() {
+ 		return this.imagenNave;
+ 	}
 	public void inicializarVistaDeInvasores() {
 	    ControladorJuego controller = ControladorJuego.getInstancia();
 	    List<ModeloInvasor> modelosInvasores = controller.getInvasoresActivos(); 
@@ -136,12 +151,18 @@ public class PanelPrincipal extends JPanel {
 	public void actualizarVista() {
 	    ControladorJuego controller = ControladorJuego.getInstancia();
 	    
+	    
+	    // NEW: Ship Flash Update
+	    if (imagenNave != null) {
+	        // Pass the Controller's boolean state to the View component
+	        imagenNave.updateFlash(controller.isShipFlashing()); 
+	        imagenNave.setVisible(true); // Ensure the ship is always visible (not blinking off)
+	    }
 
 	    proyectiles.removeIf(pv -> {
 	        Proyectiles modelo = controller.getProyectilById(pv.getModeloId());
 	        
-	        final int PRO_WIDTH = 8;
-	        final int PRO_HEIGHT = 15;
+	      
 	        final int SHIP_WIDTH_OFFSET = 30; 
 	        
 	        if (modelo == null || !modelo.isActivo()) { 
@@ -160,7 +181,38 @@ public class PanelPrincipal extends JPanel {
 	        }
 	    });
 	    
-	    List<ModeloInvasor> modelosInvasores = controller.getInvasoresActivos(); 
+	    List<Proyectiles> modeloShots = controller.getProyectiles(); // <-- You need this getter
+	    
+	    for (Proyectiles modelo : modeloShots) {
+	        // Check if this Model projectile already has a View component
+	        boolean viewExists = false;
+	        for (ProyectilVista pv : proyectiles) {
+	            if (pv.getModeloId() == modelo.getId()) {
+	                viewExists = true;
+	                break;
+	            }
+	        }
+	        
+	        // If the Model exists but the View component doesn't, create it!
+	        if (!viewExists) {
+	        	ProyectilVista newPro = new ProyectilVista(modelo.getId());
+	            
+	            int invaderWidth = 32;  // Assuming invader width
+	            
+	            int offsetX = modelo.esDelJugador() ? 30 : (invaderWidth / 2) - 4; // Center enemy shot (e.g. 30/2 - 4)
+
+	            newPro.setBounds(
+	                modelo.getX() + offsetX,
+	                modelo.getY(), // <-- CRITICAL: Start Y below the invader
+	                PRO_WIDTH, 
+	                PRO_HEIGHT
+	            );
+
+	            proyectiles.add(newPro);
+	            add(newPro);
+	        }
+	    }
+	    
         
         invasoresVista.removeIf(iv -> {
             ModeloInvasor modelo = controller.getInvasorById(iv.getModeloId());

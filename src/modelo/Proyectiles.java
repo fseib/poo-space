@@ -6,28 +6,28 @@ public class Proyectiles {
 	private int alto;
 	private int ancho;
 	private int velocidad;;
-	private boolean esDelJuegador;
+	private boolean esDelJugador;
 	private boolean activo;
 	
 	private final int id;
     private static int nextId = 0; 
 	
-	public Proyectiles(int posicionX, boolean esDelJugador, int velocidad) {
+	public Proyectiles(int posicionX, int posicionY, boolean esDelJugador, int velocidad) {
 		this.id = nextId++; 
 		this.posicionX = posicionX;
-		this.esDelJuegador = esDelJugador;
+		this.esDelJugador = esDelJugador;
 		this.velocidad = velocidad;
 		this.ancho = 8;
 		this.alto = 15;
+		this.posicionY = posicionY;
 		
 		if(esDelJugador) {
-			posicionY = 500 - 15;
 			this.velocidad *= -1;
 		}
 		else {
-			posicionY = 600;
+			this.velocidad *= 0.9;
 		}
-		
+
 		this.activo = true;
 	}
 	
@@ -54,10 +54,10 @@ public class Proyectiles {
 	public int getAncho() {
 		return this.ancho;
 	}
-	public void colisionCon(int proyectilX, int proyectilY, int objetoX, int objectoY) {
-		
+
+	public boolean esDelJugador() {
+		return this.esDelJugador;
 	}
-	
 	public boolean isActivo() {
 		return activo;
 	}
