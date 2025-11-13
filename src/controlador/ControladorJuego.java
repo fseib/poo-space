@@ -35,7 +35,7 @@ public class ControladorJuego implements ActionListener {
 	private int puntaje;
 	private int puntajeParaNuevaVida = 0;
 	
-	private int creditos = 0; // Number of available credits
+	private int creditos = 0;
 
 	
 	private int vidas;
@@ -49,22 +49,22 @@ public class ControladorJuego implements ActionListener {
 	private final int COOLDOWN_TICKS = 18; // Shoot once every 15 game ticks (~250ms at 66 FPS)
 	private int ticksSinceLastShot = 0;
 	
-	private final int PAUSA_NIVEL_COMPLETADO = 120; // e.g., 100 game ticks for a pause
-	private int pausaContador = 0; // Counter for the pause
+	private final int PAUSA_NIVEL_COMPLETADO = 120; // ticks
+	private int pausaContador = 0;
 	
 	private PanelPrincipal vistaPanel; 
 	
 	private boolean screenFlash = false; 
-	private final int FLASH_ON_TICKS = 15; // NEW: Flash ON for 15 ticks (~225ms)
-	private final int FLASH_OFF_TICKS = 20; // NEW: Flash OFF for 20 ticks (~300ms)
+	private final int FLASH_ON_TICKS = 15; //ticks
+	private final int FLASH_OFF_TICKS = 20; //ticks
 
-	private final double BASE_PIXELS_HORIZONTAL = 6.0; // Use doubles for accurate scaling
+	private final double BASE_PIXELS_HORIZONTAL = 6.0;
 	private final double BASE_PIXELS_CAIDA = 20.0;
-	private final int PAUSA_VIDA_PERDIDA = 100; // Total pause duration (1 second)
-	private boolean shipFlashState = false; // NEW: Controls the ship's current icon (blue/white)
+	private final int PAUSA_VIDA_PERDIDA = 100;
+	private boolean shipFlashState = false;
 	
-	private final int PLAYER_PROJ_OFFSET = 28; // NEW
-	private final int ENEMY_PROJ_OFFSET = 18;  // NEW (Assuming Invader W=40)
+	private final int PLAYER_PROJ_OFFSET = 28;
+	private final int ENEMY_PROJ_OFFSET = 18;
 	private final int SHIELD_ALIGNMENT_OFFSET_X = 15;
 	
 	public ControladorJuego() {
@@ -162,16 +162,12 @@ public class ControladorJuego implements ActionListener {
     }
     
 	public int getVelocidadHorizontal() {
-	    // 1. Calculate the difficulty and level factor
 	    double difficultyFactor = getDifficultyFactor();
 	    
-	    // Level scaling: 10% increase per level beyond 1
 	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.13;
 	    
-	    // 2. Apply all factors to the BASE speed
 	    double finalSpeed = BASE_PIXELS_HORIZONTAL * difficultyFactor * levelMultiplier;
 	    
-	    // 3. Return the final, rounded pixel value (minimum 1)
 	    return Math.max(1, (int) Math.round(finalSpeed));
 	}
 
@@ -204,15 +200,15 @@ public class ControladorJuego implements ActionListener {
 	}
 	
 	private void crearMuros() {
-		int SHIELD_WIDTH = 48; // Assuming 3 sections wide * 16px/section
+		int SHIELD_WIDTH = 48;
 	    int GAP = 80;
 	    int Y_POS = 350;
 	    int TOTAL_WIDTH = 4 * SHIELD_WIDTH + 3 * GAP;
-	    int START_X = (800 - TOTAL_WIDTH) / 2; // Center the group in the 800-wide screen
+	    int START_X = (800 - TOTAL_WIDTH) / 2;
 
 	    for (int i = 0; i < 4; i++) {
 	        int x = START_X + i * (SHIELD_WIDTH + GAP) + SHIELD_ALIGNMENT_OFFSET_X;
-	        muros.add(new MuroEnergia(x, Y_POS)); // MuroEnergia constructor builds the sections
+	        muros.add(new MuroEnergia(x, Y_POS));
 	    }
 	}
 
@@ -257,13 +253,10 @@ public class ControladorJuego implements ActionListener {
 	    else if (this.estado != null && this.estado.equals("PAUSA_POST_NIVEL")) {
 	    	pausaContador++;
 	        
-	        // Turn flash ON when the counter hits a multiple of 'interval'
 	    	int totalCycle = FLASH_ON_TICKS + FLASH_OFF_TICKS;
 	        
-	        // Use the counter modulus the total cycle to determine the ON/OFF state
 	        int cycleTime = pausaContador % totalCycle;
 
-	        // Flash is ON for the first part of the cycle
 	        if (cycleTime < FLASH_ON_TICKS) {
 	            screenFlash = true;
 	        } else {
@@ -271,11 +264,11 @@ public class ControladorJuego implements ActionListener {
 	        }
 	        
 	        if (vistaPanel != null) { 
-	            vistaPanel.repaint(); // Call repaint to show the flash
+	            vistaPanel.repaint();
 	        }
 	        
 	    	if(pausaContador >= PAUSA_NIVEL_COMPLETADO) {
-	    		gameTimer.stop(); // <-- STOP TIMER HERE, right before the expensive reset
+	    		gameTimer.stop();
 	    		aumentarNivel();
 	    	}
 	    }
@@ -283,32 +276,25 @@ public class ControladorJuego implements ActionListener {
 	        pausaContador++;
 	        
 	        
-	        if (pausaContador % 5 == 0) { // Toggle ON/OFF rapidly
+	        if (pausaContador % 5 == 0) {
 	            this.shipFlashState = !this.shipFlashState;
 	        }
 	        
 	        if (vistaPanel != null) { 
-	            // We call the full update to ensure the ship component is redrawn immediately.
 	            vistaPanel.actualizarVista(); 
 	        }
 
 	        if (pausaContador >= PAUSA_VIDA_PERDIDA) {
 	        	limpiarModeloProyectiles();
 	        	vistaPanel.limpiarProyectiles();
-	            this.shipFlashState = false; // Ensure ship returns to normal state
-	            this.estado = "JUGANDO"; // Resume the game loop
+	            this.shipFlashState = false;
+	            this.estado = "JUGANDO";
 	        }
 	    }
 	    else if (this.estado != null && this.estado.equals("GAME_OVER")) {
-	        
-	        // This block runs once per tick until the state is reset, 
-	        // so we must prevent running the heavy logic multiple times.
-	        
-	        // CRITICAL: Call the final score management sequence
+
 	        manejarFinDeJuego(this.puntaje); 
 	        
-	        // NOTE: The manejarFinDeJuego() method should handle the final view switch 
-	        // (i.e., calling reiniciarJuegoTotal()) which resets the state and returns to the menu.
 	    }
 	}
 	
@@ -358,14 +344,12 @@ public class ControladorJuego implements ActionListener {
 	
 	public boolean iniciarJuego() {
 		if (!consumirCredito()) {
-	        // BLOCK: Show warning message and DO NOT start the game.
 	        JOptionPane.showMessageDialog(vistaPanel, 
 	            "¡NECESITAS UN CRÉDITO PARA JUGAR!", 
 	            "CRÉDITO REQUERIDO", JOptionPane.WARNING_MESSAGE);
-	        return false; // Signal failure to the View
+	        return false;
 	    }
 
-	    // 2. Proceed with successful start logic (Only runs if credit consumed)
 	    if (!gameTimer.isRunning()) {
 	        this.estado = "JUGANDO";
 	        
@@ -375,9 +359,9 @@ public class ControladorJuego implements ActionListener {
 	        }
 	        
 	        gameTimer.start();
-	        return true; // Signal success
+	        return true;
 	    }
-	    return false; // Already running or other minor failure
+	    return false;
 	}
 	
 	private void aumentarNivel() {
@@ -397,7 +381,7 @@ public class ControladorJuego implements ActionListener {
 	    	actualizarHUD();
 
 	        vistaPanel.limpiarVista();
-	        vistaPanel.inicializarVistaDeInvasores(); // Recreate the visual invader components
+	        vistaPanel.inicializarVistaDeInvasores();
 	        vistaPanel.inicializarVistaDeMuros(muros);
 	    }
 	    
@@ -407,13 +391,11 @@ public class ControladorJuego implements ActionListener {
 	}
 	
 	private void verificarEstadoDelJuego() {
-	    // 1. Check Win Condition
 	    if (oleada.isEmpty()) {
-	        this.estado = "PAUSA_POST_NIVEL"; // New state to hold the pause
-	        pausaContador = 0; // Start the counter
-	        System.out.println("Nivel Completado"); // Optional console check
+	        this.estado = "PAUSA_POST_NIVEL"; 
+	        pausaContador = 0; 
+	        System.out.println("Nivel Completado"); 
 	    }	
-	    // ... (Loss condition logic here later) ...
 	}
 	
 
@@ -534,12 +516,10 @@ public class ControladorJuego implements ActionListener {
 		                this.estado = "VIDA_PERDIDA";
 		                pausaContador = 0;
 		                
-		                // Check if the game is over
 		                if (vidas <= 0) {
 		                    this.estado = "GAME_OVER";
 		                }
 		                
-		                // Later: Add logic to check if vidas <= 0 for GAME_OVER state
 		            }
 		        }
 		    }
@@ -555,19 +535,13 @@ public class ControladorJuego implements ActionListener {
 }
 	
 
-	// Add a public method for the "Añadir un credito" button
 	public void añadirCredito() {
-	    this.creditos++;
-	    // Optional: Update the HUD immediately if it displays credits
-	    // actualizarHUD(); 
+	    this.creditos++;; 
 	}
 
-	// Add a method to check and consume a credit before starting a game
 	public boolean consumirCredito() {
 	    if (this.creditos >= 1) {
-	        this.creditos--;
-	        // Optional: Update the HUD after consumption
-	        // actualizarHUD(); 
+	        this.creditos--; 
 	        return true;
 	    }
 	    return false;
@@ -577,20 +551,14 @@ public class ControladorJuego implements ActionListener {
 	    
 		Ranking ranking = new Ranking();
 	    
-	    // Check if the score is high enough to be recorded
-	    // Note: The Ranking model handles the complexity of "new high score" or "player's personal best."
-	    // We will assume any score is eligible for saving, and the Ranking class handles the comparison.
-
 	    String title = "GAME OVER";
 	    String message = "¡TU PUNTAJE FINAL ES: " + finalScore + "!\n\nIngresa tu nombre para guardar tu récord:";
 	    
-	    // 1. Check if a top score exists to display the current record.
 	    RegistroJugador topPlayer = ranking.obtenerTop();
 	    if (topPlayer != null) {
 	        message += "\n(El record actual es: " + topPlayer.getPuntaje() + ")";
 	    }
 
-	    // 2. Prompt the player for their name using a Swing dialog (View interaction)
 	    String playerName = JOptionPane.showInputDialog(
 	        vistaPanel, 
 	        message, 
@@ -598,21 +566,16 @@ public class ControladorJuego implements ActionListener {
 	        JOptionPane.QUESTION_MESSAGE
 	    );
 
-	    // 3. Process the input and save
 	    if (playerName != null && !playerName.trim().isEmpty()) {
 	        
-	        // CRITICAL FIX: Capture the return value from the model!
 	        boolean scoreWasSaved = ranking.registrarPuntaje(playerName.trim(), finalScore);
 	        
-	        // Save the changes to the file immediately (only if saved, but redundant if registrarPuntaje calls it)
-	        // ranking.guardarEnArchivo(); // We assume registrarPuntaje handles the save
-	        
+	  
 	        if (scoreWasSaved) {
 	            JOptionPane.showMessageDialog(vistaPanel, 
 	                "¡Puntaje de " + finalScore + " guardado para " + playerName.trim() + "!", 
 	                "Guardado Exitoso", JOptionPane.INFORMATION_MESSAGE);
 	        } else {
-	            // New message for when the score is lower than their existing best
 	             JOptionPane.showMessageDialog(vistaPanel, 
 	                "Tu puntaje (" + finalScore + ") no superó tu récord anterior.", 
 	                "Puntaje No Guardado", JOptionPane.INFORMATION_MESSAGE);
@@ -623,30 +586,23 @@ public class ControladorJuego implements ActionListener {
 	            "Fin del Juego", JOptionPane.INFORMATION_MESSAGE);
 	    }
 	    
-	    // 4. Transition back to the Main Menu (Required for a clean reset)
-	    // We need the Ventana instance to switch the view.
 	    ControladorJuego.getInstancia().reiniciarJuegoTotal(); 
 	}
 	
-	// Inside ControladorJuego.java (NEW method to facilitate app restart/menu return)
 	public void reiniciarJuegoTotal() {
-		// 1. Reset all critical Model fields
 	    this.puntaje = 0;
 	    this.nivel = 1;
 	    this.vidas = 3;
 	    this.estado = null;
 	    
-	    // 2. Stop the timer and clear models
 	    gameTimer.stop();
 	    this.proyectiles.clear();
 	    this.muros.clear();
 	    
-	    // 3. Clear the game visuals
 	    if (vistaPanel != null) {
 	        vistaPanel.limpiarVista();
 	    }
 	    
-	    // 4. CRITICAL: Trigger the return to the Main Menu (View switch)
 	    Ventana mainFrame = Ventana.getInstancia();
 	    if (mainFrame != null) {
 	        mainFrame.showMenuPanel();

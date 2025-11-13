@@ -11,7 +11,7 @@ import java.util.List;
 
 public class Ranking {
 	private List<RegistroJugador> registros;
-	private final String archivoRanking = "highscores.txt"; // Use a final file name
+	private final String archivoRanking = "highscores.txt"; 
 	
 	public Ranking() {
 		
@@ -25,29 +25,25 @@ public class Ranking {
 		int indice = chequearJugador(nombre, puntaje);
 	    
 	    if (indice > -1) {
-	        // Player exists: check if new score is higher.
 	        if (registros.get(indice).getPuntaje() < puntaje) {
 	            registros.remove(indice);
 	            insertarNuevoRegistro(nombre, puntaje);
 	            guardarEnArchivo();
-	            return true; // <<< SCORE WAS UPDATED/SAVED
+	            return true;
 	        }
 	    } else {
-	        // New player: insert the score.
 	        insertarNuevoRegistro(nombre, puntaje);
 	        guardarEnArchivo();
-	        return true; // <<< SCORE WAS INSERTED/SAVED
+	        return true; 
 	    }
 	    
 	    return false;
 	}
 	
 	public RegistroJugador obtenerTop() {
-        // Find the record with the maximum score.
-        // If the list isn't sorted, we need to find the max score manually:
         return registros.stream()
                         .max(Comparator.comparingInt(RegistroJugador::getPuntaje))
-                        .orElse(null); // Returns null if the list is empty
+                        .orElse(null);
     }
 	
 	public void insertarNuevoRegistro(String nombre, int puntaje) {
@@ -70,18 +66,14 @@ public class Ranking {
 	}
 	
 	public boolean esNuevoRecord(int puntajeFinal) {
-        // If the list is empty, any score is a new record.
         if (registros.isEmpty()) {
             return true;
         }
-        // Assuming the list is always sorted (highest score first).
-        // If not, we find the maximum score in the list.
         RegistroJugador topPlayer = obtenerTop();
         return puntajeFinal > topPlayer.getPuntaje();
     }
 	
 	public void guardarEnArchivo() {
-        // Format: NAME,SCORE
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivoRanking))) {
             for (RegistroJugador registro : registros) {
                 writer.write(registro.getNombre() + "," + registro.getPuntaje() + "\n");
@@ -92,7 +84,6 @@ public class Ranking {
     }
     
     public void cargarDesdeArchivo() {
-        // Load records from the file
         try (BufferedReader reader = new BufferedReader(new FileReader(archivoRanking))) {
             String linea;
             while ((linea = reader.readLine()) != null) {
@@ -101,23 +92,19 @@ public class Ranking {
                     try {
                         String nombre = partes[0];
                         int puntaje = Integer.parseInt(partes[1]);
-                        // Use a private helper method to add loaded records without re-saving
                         registros.add(new RegistroJugador(nombre, puntaje)); 
                     } catch (NumberFormatException e) {
                         System.err.println("Error de formato de puntaje en archivo: " + linea);
                     }
                 }
             }
-            // Sort the loaded data once
             registros.sort(Comparator.comparingInt(RegistroJugador::getPuntaje).reversed());
             
         } catch (IOException e) {
-            // File may not exist yet, which is fine for the first run
             System.out.println("Archivo de ranking no encontrado. Se creará uno nuevo al guardar.");
         }
     }
     
-    // Getter for the list (useful for the Scoreboard View)
     public List<RegistroJugador> getRegistros() {
         return registros;
     }

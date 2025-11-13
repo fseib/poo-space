@@ -102,16 +102,11 @@ public class PanelPrincipal extends JPanel {
 	}
 	
 	public void inicializarVistaDeMuros(List<MuroEnergia> murosModel) {
-	    ControladorJuego controller = ControladorJuego.getInstancia();
 	    
-	    // Assuming you have a list of MuroEnergia objects in the Controller
-	    // Loop through each MuroEnergia
 	    for (MuroEnergia muroModel : murosModel) {
-	        // Loop through each SeccionMuro inside the manager
 	        for (SeccionMuro seccionModel : muroModel.getSecciones()) {
-	            ImagenMuro newMuroView = new ImagenMuro(seccionModel); // Link view to model
+	            ImagenMuro newMuroView = new ImagenMuro(seccionModel);
 	            
-	            // Position the view component
 	            newMuroView.setBounds(seccionModel.getX(), seccionModel.getY(), 
 	                                   seccionModel.getAncho(), seccionModel.getAlto());
 	            
@@ -179,11 +174,9 @@ public class PanelPrincipal extends JPanel {
 	    ControladorJuego controller = ControladorJuego.getInstancia();
 	    
 	    
-	    // NEW: Ship Flash Update
 	    if (imagenNave != null) {
-	        // Pass the Controller's boolean state to the View component
 	        imagenNave.updateFlash(controller.isShipFlashing()); 
-	        imagenNave.setVisible(true); // Ensure the ship is always visible (not blinking off)
+	        imagenNave.setVisible(true);
 	    }
 
 	    proyectiles.removeIf(pv -> {
@@ -208,10 +201,9 @@ public class PanelPrincipal extends JPanel {
 	        }
 	    });
 	    
-	    List<Proyectiles> modeloShots = controller.getProyectiles(); // <-- You need this getter
+	    List<Proyectiles> modeloShots = controller.getProyectiles(); 
 	    
 	    for (Proyectiles modelo : modeloShots) {
-	        // Check if this Model projectile already has a View component
 	        boolean viewExists = false;
 	        for (ProyectilVista pv : proyectiles) {
 	            if (pv.getModeloId() == modelo.getId()) {
@@ -220,16 +212,15 @@ public class PanelPrincipal extends JPanel {
 	            }
 	        }
 	        
-	        // If the Model exists but the View component doesn't, create it!
 	        if (!viewExists) {
 	        	ProyectilVista newPro = new ProyectilVista(modelo.getId());
 	            
-	            int invaderWidth = 32;  // Assuming invader width
+	            int invaderWidth = 32; 
 	            
-	            int offsetX = modelo.esDelJugador() ? 30 : (invaderWidth / 2) - 4; // e.g., 15 - 4 = 11
+	            int offsetX = modelo.esDelJugador() ? 30 : (invaderWidth / 2) - 4;
 	            newPro.setBounds(
 	                modelo.getX() + offsetX,
-	                modelo.getY(), // <-- CRITICAL: Start Y below the invader
+	                modelo.getY(),
 	                PRO_WIDTH, 
 	                PRO_HEIGHT
 	            );
@@ -257,7 +248,7 @@ public class PanelPrincipal extends JPanel {
                 remove(im);
                 return true;
             }
-            // Force a redraw of the section to show new damage/color
+
             im.repaint(); 
             return false;
         });

@@ -123,30 +123,21 @@ public class Oleada {
         if (naves.isEmpty()) {
             return null;
         }
-        
-        // --- Step 1: GLOBAL CHANCE CHECK (Only runs ONCE per tick) ---
-        
-        // We set a base chance that *any* invader will shoot this frame.
-        // 0.005 (0.5%) means a shot is fired on average once every 200 ticks (approx 3 seconds).
+
         final double GLOBAL_BASE_CHANCE = 0.020; 
         
-        // Total Chance = Base Chance * Difficulty Factor
         double totalFiringChance = GLOBAL_BASE_CHANCE * difficultyFactor;
-        totalFiringChance = Math.min(totalFiringChance, 1.0); // Cap at 100%
-        
-        // Check if the game should fire a shot this frame.
-        // NOTE: This reverses your original > check to use standard < probability checking.
-        // If random value is less than the total chance, the shot is successful.
+        totalFiringChance = Math.min(totalFiringChance, 1.0); 
+
+
         if (random.nextDouble() < totalFiringChance) { 
             
-            // --- Step 2: FIND SHOOTER (Only runs if the global chance succeeded) ---
             
             ModeloInvasor shooter = null;
             int maxAttempts = 10;
             
-            // Loop to find an active invader to be the shooter
+
             for (int i = 0; i < maxAttempts; i++) {
-                // Simple approach: Choose a random invader
                 int index = random.nextInt(naves.size());
                 ModeloInvasor candidate = naves.get(index);
                 
@@ -157,12 +148,8 @@ public class Oleada {
             }
             
             if (shooter != null) {
-                // Step 3: Create and return the projectile Model object
                 int velocidadEnemiga = 5; 
                 
-                // Calculate precise starting position (centered on invader's body)
-                // Note: I added a small offset to the X coordinate (e.g., -4) to center the 8-wide bullet (8/2=4) 
-                // inside the invader's body, assuming the Model X is the invader's corner.
                 int startX = shooter.getX() + (shooter.getAncho() / 2) - 4; 
                 int startY = shooter.getY() + shooter.getAlto();     
                             
@@ -176,6 +163,6 @@ public class Oleada {
             }
         }
         
-        return null; // No shot fired this tick
+        return null;
     }
 }

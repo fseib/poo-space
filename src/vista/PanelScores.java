@@ -1,6 +1,5 @@
 package vista;
 
-// Inside vista/PanelScores.java
 
 import java.awt.*;
 import javax.swing.*;
@@ -8,36 +7,32 @@ import modelo.Ranking;
 import modelo.RegistroJugador;
 
 public class PanelScores extends JPanel {
-    
-    public PanelScores() {
+
+	private static final long serialVersionUID = 3846298706410544134L;
+
+	public PanelScores() {
         setLayout(new BorderLayout(10, 10));
         setBackground(Color.BLACK);
         setPreferredSize(new Dimension(800, 600)); 
     }
 
     public void displayScores() {
-        // Clear previous content
         removeAll(); 
         
-        // Fetch data
         Ranking ranking = new Ranking();
         java.util.List<RegistroJugador> topScores = ranking.getRegistros();
         
-        // Title
         JLabel title = new JLabel("TOP 10 HISTÓRICO", SwingConstants.CENTER);
         title.setFont(new Font("Monospaced", Font.BOLD, 30));
         title.setForeground(Color.YELLOW);
         add(title, BorderLayout.NORTH);
         
-        // --- Score Table Content ---
         JPanel scoreList = new JPanel();
         scoreList.setLayout(new BoxLayout(scoreList, BoxLayout.Y_AXIS));
         scoreList.setBackground(Color.BLACK);
         
-        // Headers
         scoreList.add(createScoreRow("#", "NOMBRE", "PUNTAJE", Color.CYAN));
         
-        // Display top 10 scores
         for (int i = 0; i < Math.min(10, topScores.size()); i++) {
             RegistroJugador reg = topScores.get(i);
             Color rowColor = (i % 2 == 0) ? Color.GREEN : Color.LIGHT_GRAY;
@@ -54,10 +49,8 @@ public class PanelScores extends JPanel {
         scrollPane.getViewport().setBackground(Color.BLACK);
         add(scrollPane, BorderLayout.CENTER);
         
-        // Back Button
         JButton backButton = new JButton("VOLVER AL MENÚ");
         backButton.addActionListener(e -> {
-            // Need reference to Ventana to call showMenuPanel()
             ((Ventana) SwingUtilities.getWindowAncestor(this)).showMenuPanel();
         });
         add(backButton, BorderLayout.SOUTH);
