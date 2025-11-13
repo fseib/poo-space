@@ -77,14 +77,15 @@ public class PanelHUD extends JPanel {
         int iconsToShow = Math.min(lives, MAX_ICONS_SHOWN);
         
         // 1. Draw the required number of ship icons
+        if(lives <= MAX_ICONS_SHOWN)
         for (int i = 0; i < iconsToShow; i++) {
             // You need a method or a class that returns a JLabel with the scaled ship icon
             JLabel shipIconLabel = createShipIconLabel(); 
             livesPanel.add(shipIconLabel);
         }
-        
-        // 2. Handle "x N" if lives exceed the maximum display limit
-        if (lives > MAX_ICONS_SHOWN) {
+        else {
+        	JLabel shipIconLabel = createShipIconLabel(); 
+            livesPanel.add(shipIconLabel);
             JLabel multiplierLabel = new JLabel("x " + lives);
             multiplierLabel.setForeground(Color.RED);
             multiplierLabel.setFont(gameFont);

@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
 import modelo.AreaDeJuego;
@@ -14,8 +15,12 @@ import modelo.ModeloNave;
 import modelo.MuroEnergia;
 import modelo.Oleada;
 import modelo.Proyectiles;
+import modelo.Ranking;
+import modelo.RegistroJugador;
+import modelo.SeccionMuro;
 import vista.PanelHUD;
 import vista.PanelPrincipal;
+import vista.Ventana;
 
 public class ControladorJuego implements ActionListener {
 
@@ -26,14 +31,20 @@ public class ControladorJuego implements ActionListener {
     
 	private ModeloNave modeloNave;
 	private AreaDeJuego areaJuego;
+	
 	private int puntaje;
+	private int puntajeParaNuevaVida = 0;
+	
+	private int creditos = 0; // Number of available credits
+
+	
 	private int vidas;
 	private int nivel;
 	private String dificultad;
 	private String estado;
 	private List<Proyectiles> proyectiles = new ArrayList<>();
 	private Oleada oleada;
-	private MuroEnergia muro;
+	private List<MuroEnergia> muros = new ArrayList<>();
 	
 	private final int COOLDOWN_TICKS = 18; // Shoot once every 15 game ticks (~250ms at 66 FPS)
 	private int ticksSinceLastShot = 0;
@@ -51,30 +62,25 @@ public class ControladorJuego implements ActionListener {
 	private final double BASE_PIXELS_CAIDA = 20.0;
 	private final int PAUSA_VIDA_PERDIDA = 100; // Total pause duration (1 second)
 	private boolean shipFlashState = false; // NEW: Controls the ship's current icon (blue/white)
-	public void setVista(PanelPrincipal panel) { 
-	    this.vistaPanel = panel;
-	}
 	
-	public boolean isScreenFlashing() {
-	    return screenFlash;
-	}
-	
-	public boolean isShipFlashing() {
-	    return shipFlashState;
-	}
+	private final int PLAYER_PROJ_OFFSET = 28; // NEW
+	private final int ENEMY_PROJ_OFFSET = 18;  // NEW (Assuming Invader W=40)
+	private final int SHIELD_ALIGNMENT_OFFSET_X = 15;
 	
 	public ControladorJuego() {
 		this.puntaje = 0;
 		this.nivel = 1;
 		this.vidas = 3;
 		this.dificultad = "NORMAL";
-		
+
 		areaJuego = new AreaDeJuego(600,800);
+		
+		crearMuros();
 		
 		int SHIP_WIDTH = 60;
 	    int SCREEN_CENTER_X = 400;
 	    
-		int MODEL_START_X = SCREEN_CENTER_X - (SHIP_WIDTH / 2); // 400 - 30 = 370
+		int MODEL_START_X = SCREEN_CENTER_X - (SHIP_WIDTH / 2);
 		modeloNave = new ModeloNave(MODEL_START_X,500,getVelocidad(),60,30,areaJuego);
 
 		
@@ -87,25 +93,49 @@ public class ControladorJuego implements ActionListener {
 		gameTimer = new Timer(DELAY, this);
 	}
 	
+	
+	public void setVista(PanelPrincipal panel) { 
+	    this.vistaPanel = panel;
+	}
+	
 	public void setVistaHUD(PanelHUD hud) {
 	    this.vistaHUD = hud;
 	}
-
-	private void actualizarHUD() {
-	    if (vistaHUD != null) {
-	        vistaHUD.actualizarHUD(puntaje, vidas, nivel); 
-	    }
+	
+	public void setDificultad(String newDificultad) {
+	    this.dificultad = newDificultad;
 	}
+	
+	public List<Proyectiles> getProyectiles() {
+		return this.proyectiles;
+	}
+	
+	public ModeloNave getModeloNave() {
+		return this.modeloNave;
+	}
+	
+	public String getEstado() {
+		return this.estado;
+	}
+	
+	public int getCreditos() {
+		return this.creditos;
+	}
+	
+	public boolean isScreenFlashing() {
+	    return screenFlash;
+	}
+	
+	public boolean isShipFlashing() {
+	    return shipFlashState;
+	}
+	
 	
 	public static ControladorJuego getInstancia() {
 	    if (instancia == null) {
 	        instancia = new ControladorJuego(); 
 	    }
 	    return instancia;
-	}
-	
-	public List<Proyectiles> getProyectiles() {
-		return this.proyectiles;
 	}
 	
 	public Proyectiles getProyectilById(int id) {
@@ -117,13 +147,90 @@ public class ControladorJuego implements ActionListener {
 	    return null;
 	}
 	
-	public ModeloNave getModeloNave() {
-		return this.modeloNave;
+	public int getVelocidad() {
+		return 8;
 	}
+	
+    public List<ModeloInvasor> getInvasoresActivos() {
+        if (oleada == null) return new ArrayList<>();
+        return oleada.getInvasoresActivos();
+    }
+
+    public ModeloInvasor getInvasorById(int id) {
+        if (oleada == null) return null;
+        return oleada.getInvasorById(id);
+    }
+    
+	public int getVelocidadHorizontal() {
+	    // 1. Calculate the difficulty and level factor
+	    double difficultyFactor = getDifficultyFactor();
+	    
+	    // Level scaling: 10% increase per level beyond 1
+	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.13;
+	    
+	    // 2. Apply all factors to the BASE speed
+	    double finalSpeed = BASE_PIXELS_HORIZONTAL * difficultyFactor * levelMultiplier;
+	    
+	    // 3. Return the final, rounded pixel value (minimum 1)
+	    return Math.max(1, (int) Math.round(finalSpeed));
+	}
+
+	public int getVelocidadCaida() {
+	    double difficultyFactor = getDifficultyFactor();
+	    
+	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.12;
+
+	    double finalDrop = BASE_PIXELS_CAIDA * difficultyFactor * levelMultiplier;
+	    
+	    return Math.max(1, (int) Math.round(finalDrop));
+	}
+	
+	private double getDifficultyFactor() {
+
+		   String currentDificultad = (dificultad != null) ? dificultad : "NORMAL";	
+		    if (currentDificultad != null) {
+		        switch (currentDificultad.toUpperCase()) {
+		            case "FACIL": 
+		                return 0.5;
+		            case "DIFICIL": 
+		                return 1.4;
+		                
+		            default:
+		                return 0.8;
+		        }
+		    }
+		    
+		    return 0.8;
+	}
+	
+	private void crearMuros() {
+		int SHIELD_WIDTH = 48; // Assuming 3 sections wide * 16px/section
+	    int GAP = 80;
+	    int Y_POS = 350;
+	    int TOTAL_WIDTH = 4 * SHIELD_WIDTH + 3 * GAP;
+	    int START_X = (800 - TOTAL_WIDTH) / 2; // Center the group in the 800-wide screen
+
+	    for (int i = 0; i < 4; i++) {
+	        int x = START_X + i * (SHIELD_WIDTH + GAP) + SHIELD_ALIGNMENT_OFFSET_X;
+	        muros.add(new MuroEnergia(x, Y_POS)); // MuroEnergia constructor builds the sections
+	    }
+	}
+
+	private void actualizarHUD() {
+	    if (vistaHUD != null) {
+	        vistaHUD.actualizarHUD(puntaje, vidas, nivel); 
+	    }
+	}
+	
+	
 	@Override
 	public void actionPerformed(ActionEvent e) {
 	    if (this.estado != null && this.estado.equals("JUGANDO")) {
 	    	ticksSinceLastShot++;	
+	    	if(puntajeParaNuevaVida > 499) {
+	    		this.vidas++;
+	    		this.puntajeParaNuevaVida = 0;
+	    	}
 	        // --- 1. MOVIMIENTO/STATE UPDATE ---
 	        
 	        actualizarProyectiles(); 
@@ -131,7 +238,7 @@ public class ControladorJuego implements ActionListener {
 	        
 	        Proyectiles enemigoProyectil = oleada.intentarDispararEnemigo(getDifficultyFactor());
 	        if (enemigoProyectil != null) {
-	            proyectiles.add(enemigoProyectil); // Add the new enemy shot to the master list
+	            proyectiles.add(enemigoProyectil);
 	        }
 	        
 	        // --- 2. COLLISION CHECK ---
@@ -192,6 +299,17 @@ public class ControladorJuego implements ActionListener {
 	            this.estado = "JUGANDO"; // Resume the game loop
 	        }
 	    }
+	    else if (this.estado != null && this.estado.equals("GAME_OVER")) {
+	        
+	        // This block runs once per tick until the state is reset, 
+	        // so we must prevent running the heavy logic multiple times.
+	        
+	        // CRITICAL: Call the final score management sequence
+	        manejarFinDeJuego(this.puntaje); 
+	        
+	        // NOTE: The manejarFinDeJuego() method should handle the final view switch 
+	        // (i.e., calling reiniciarJuegoTotal()) which resets the state and returns to the menu.
+	    }
 	}
 	
 	private void limpiarModeloProyectiles() {
@@ -220,9 +338,6 @@ public class ControladorJuego implements ActionListener {
 		return modeloNave.moverIzquierda();
 	}
 	
-	public int getVelocidad() {
-	return 8;
-	}
 	
 	
 	public int dispararNave() {
@@ -239,47 +354,51 @@ public class ControladorJuego implements ActionListener {
 		return -1;
 	}
 
-    public List<ModeloInvasor> getInvasoresActivos() {
-        if (oleada == null) return new ArrayList<>();
-        return oleada.getInvasoresActivos();
-    }
 
-    public ModeloInvasor getInvasorById(int id) {
-        if (oleada == null) return null;
-        return oleada.getInvasorById(id);
-    }
 	
-	public void iniciarJuego() {
-		if (!gameTimer.isRunning()) {
+	public boolean iniciarJuego() {
+		if (!consumirCredito()) {
+	        // BLOCK: Show warning message and DO NOT start the game.
+	        JOptionPane.showMessageDialog(vistaPanel, 
+	            "¡NECESITAS UN CRÉDITO PARA JUGAR!", 
+	            "CRÉDITO REQUERIDO", JOptionPane.WARNING_MESSAGE);
+	        return false; // Signal failure to the View
+	    }
+
+	    // 2. Proceed with successful start logic (Only runs if credit consumed)
+	    if (!gameTimer.isRunning()) {
 	        this.estado = "JUGANDO";
 	        
-	        // 1. GUARANTEE ALL VISUALS ARE CREATED FIRST
 	        if (vistaPanel != null) {
-	            vistaPanel.inicializarVistaDeInvasores(); // BLOCKING CALL: Guarantees invaders/views are ready.
+	            vistaPanel.inicializarVistaDeMuros(muros);
+	            vistaPanel.inicializarVistaDeInvasores();
 	        }
 	        
-	        // 2. ONLY START THE TIMER AFTER THE VIEW IS READY
-	        gameTimer.start(); // Timer starts TICKING NOW that all models/views are built.
+	        gameTimer.start();
+	        return true; // Signal success
 	    }
+	    return false; // Already running or other minor failure
 	}
 	
 	private void aumentarNivel() {
 	    this.nivel++; 
 	    this.puntaje += 200;
-
+	    this.puntajeParaNuevaVida += 200;
 	    proyectiles.clear(); 
+	    muros.clear();
 	    
 	    int hSpeed = getVelocidadHorizontal();
 	    int dSpeed = getVelocidadCaida();
 	    
-	    this.oleada = new Oleada(areaJuego, hSpeed, dSpeed); // Assuming Oleada now takes 'nivel'
-	    
+	    this.oleada = new Oleada(areaJuego, hSpeed, dSpeed);
+	    crearMuros();
 
 	    if (vistaPanel != null) {
 	    	actualizarHUD();
 
-	        vistaPanel.limpiarVista(); // We will add this method to remove ALL components
+	        vistaPanel.limpiarVista();
 	        vistaPanel.inicializarVistaDeInvasores(); // Recreate the visual invader components
+	        vistaPanel.inicializarVistaDeMuros(muros);
 	    }
 	    
 	    // 5. Restart the timer
@@ -293,53 +412,11 @@ public class ControladorJuego implements ActionListener {
 	        this.estado = "PAUSA_POST_NIVEL"; // New state to hold the pause
 	        pausaContador = 0; // Start the counter
 	        System.out.println("Nivel Completado"); // Optional console check
-	    }
+	    }	
 	    // ... (Loss condition logic here later) ...
 	}
 	
-	public int getVelocidadHorizontal() {
-	    // 1. Calculate the difficulty and level factor
-	    double difficultyFactor = getDifficultyFactor();
-	    
-	    // Level scaling: 10% increase per level beyond 1
-	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.13;
-	    
-	    // 2. Apply all factors to the BASE speed
-	    double finalSpeed = BASE_PIXELS_HORIZONTAL * difficultyFactor * levelMultiplier;
-	    
-	    // 3. Return the final, rounded pixel value (minimum 1)
-	    return Math.max(1, (int) Math.round(finalSpeed));
-	}
 
-	public int getVelocidadCaida() {
-	    // The drop speed should use the same factors
-	    double difficultyFactor = getDifficultyFactor();
-	    // ... (same difficulty factor calculation as above) ...
-	    
-	    double levelMultiplier = 1.0 + (this.nivel - 1) * 0.12;
-
-	    double finalDrop = BASE_PIXELS_CAIDA * difficultyFactor * levelMultiplier;
-	    
-	    return Math.max(1, (int) Math.round(finalDrop));
-	}
-	
-	private double getDifficultyFactor() {
-
-		   String currentDificultad = (dificultad != null) ? dificultad : "NORMAL";	
-		    if (currentDificultad != null) {
-		        switch (currentDificultad.toUpperCase()) {
-		            case "FACIL": 
-		                return 0.5;
-		            case "DIFICIL": 
-		                return 1.4;
-		                
-		            default:
-		                return 0.8;
-		        }
-		    }
-		    
-		    return 0.8;
-	}
 	
 	public void verificarTodasLasColisiones() {
 			
@@ -349,6 +426,36 @@ public class ControladorJuego implements ActionListener {
 		
 		checkColisionDeJugador();
 	    
+		checkColisionConMuros();
+	}
+	
+	private void checkColisionConMuros() {
+		
+	    for (Proyectiles projectile : new ArrayList<>(proyectiles)) {
+	        if (projectile.isActivo()) {
+	            
+
+	            int projOffsetX = projectile.esDelJugador() ? PLAYER_PROJ_OFFSET : ENEMY_PROJ_OFFSET; 
+	            int projX = projectile.getX() + projOffsetX;
+	            
+	            for (MuroEnergia muro : muros) { 
+	                for (SeccionMuro seccion : muro.getSecciones()) { 
+	                    
+	                    if (!seccion.estaDestruida()) {
+	                        
+	                        if (haColisionado(projX, projectile.getY(), projectile.getAncho(), projectile.getAlto(), 
+	                            seccion.getX(), seccion.getY(), seccion.getAncho(), seccion.getAlto())) 
+	                        {
+	                            seccion.recibirGolpe(projectile.esDelJugador()); 
+	                            projectile.desactivar();
+	                            break; 
+	                        }
+	                    }
+	                }
+	                if (!projectile.isActivo()) break; 
+	            }
+	        }
+	    }
 	}
 	
 	private void checkColisionEntreProyectiles() {
@@ -364,11 +471,7 @@ public class ControladorJuego implements ActionListener {
 	            
 	            if (!projB.isActivo()) continue;
 	            
-	            // OPTIONAL: Check if projA is player and projB is enemy (or vice-versa)
-	             if (projA.esDelJugador() == projB.esDelJugador()) continue; // Ignore same-side shots
-
-	            // Use the same collision checker. APPLY OFFSETS CAREFULLY!
-	            // Assuming player projectile uses +30 offset, enemy projectile uses 0 offset.
+	             if (projA.esDelJugador() == projB.esDelJugador()) continue; 
 	            
 	            int projAX = projA.getX() + (projA.esDelJugador() ? 30 : 0); 
 	            int projBX = projB.getX() + (projB.esDelJugador() ? 30 : 0);
@@ -376,10 +479,9 @@ public class ControladorJuego implements ActionListener {
 	            if (haColisionado(projAX, projA.getY(), projA.getAncho(), projA.getAlto(),
 	                              projBX, projB.getY(), projB.getAncho(), projB.getAlto())) {
 	                
-	                // Collision detected: Deactivate both projectiles.
+
 	                projA.desactivar();
 	                projB.desactivar();
-	                // Break inner loop and move to the next projA
 	                break; 
 	            }
 	        }
@@ -401,6 +503,7 @@ public class ControladorJuego implements ActionListener {
 	                        invader.destruir();      
 	                        	                        
 	                        puntaje += invader.getScore(); 
+	                        puntajeParaNuevaVida += invader.getScore();
 	                        
 	                        actualizarHUD(); 
 	                        
@@ -414,28 +517,21 @@ public class ControladorJuego implements ActionListener {
 		
 	}
 	
-	public void setDificultad(String newDificultad) {
-	    this.dificultad = newDificultad;
-	}
-	
+
 	
 	private void checkColisionDeJugador() {
 		   for (Proyectiles projectile : new ArrayList<>(proyectiles)) {
-		        // Assuming you can identify enemy shots (e.g., if projectile.esDelJuegador() == false)
 		        if (projectile.isActivo() && !projectile.esDelJugador() ) { 
 		            
-		            // 1. Check vs. Player's Ship
 		            if (haColisionado(projectile.getX() + 30, projectile.getY(), projectile.getAncho(), projectile.getAlto(),
 		                              modeloNave.getX(), modeloNave.getY(), modeloNave.getAncho(), modeloNave.getAlto())) {
 		                
-		                projectile.desactivar(); // Destroy the enemy projectile
-		                vidas--;                 // Player takes damage
+		                projectile.desactivar(); 
+		                vidas--;
 		                
-		                // You must update the ship's state (e.g., flash, temporary invulnerability)
-		                // modeloNave.hit();
 		                
 		                actualizarHUD();
-		                this.estado = "VIDA_PERDIDA"; // <-- NEW STATE
+		                this.estado = "VIDA_PERDIDA";
 		                pausaContador = 0;
 		                
 		                // Check if the game is over
@@ -445,13 +541,6 @@ public class ControladorJuego implements ActionListener {
 		                
 		                // Later: Add logic to check if vidas <= 0 for GAME_OVER state
 		            }
-		            
-		            // 2. Check vs. Shields (MuroEnergia)
-		            /*
-		            if (muro != null && muro.checkCollision(projectile)) {
-		                projectile.desactivar();
-		            }
-		            */
 		        }
 		    }
 	}
@@ -464,5 +553,104 @@ public class ControladorJuego implements ActionListener {
 			y1 < y2 + h2 && 
 			y1 + h1 > y2;   
 }
+	
+
+	// Add a public method for the "Añadir un credito" button
+	public void añadirCredito() {
+	    this.creditos++;
+	    // Optional: Update the HUD immediately if it displays credits
+	    // actualizarHUD(); 
+	}
+
+	// Add a method to check and consume a credit before starting a game
+	public boolean consumirCredito() {
+	    if (this.creditos >= 1) {
+	        this.creditos--;
+	        // Optional: Update the HUD after consumption
+	        // actualizarHUD(); 
+	        return true;
+	    }
+	    return false;
+	}
+	
+	private void manejarFinDeJuego(int finalScore) {
+	    
+		Ranking ranking = new Ranking();
+	    
+	    // Check if the score is high enough to be recorded
+	    // Note: The Ranking model handles the complexity of "new high score" or "player's personal best."
+	    // We will assume any score is eligible for saving, and the Ranking class handles the comparison.
+
+	    String title = "GAME OVER";
+	    String message = "¡TU PUNTAJE FINAL ES: " + finalScore + "!\n\nIngresa tu nombre para guardar tu récord:";
+	    
+	    // 1. Check if a top score exists to display the current record.
+	    RegistroJugador topPlayer = ranking.obtenerTop();
+	    if (topPlayer != null) {
+	        message += "\n(El record actual es: " + topPlayer.getPuntaje() + ")";
+	    }
+
+	    // 2. Prompt the player for their name using a Swing dialog (View interaction)
+	    String playerName = JOptionPane.showInputDialog(
+	        vistaPanel, 
+	        message, 
+	        title, 
+	        JOptionPane.QUESTION_MESSAGE
+	    );
+
+	    // 3. Process the input and save
+	    if (playerName != null && !playerName.trim().isEmpty()) {
+	        
+	        // CRITICAL FIX: Capture the return value from the model!
+	        boolean scoreWasSaved = ranking.registrarPuntaje(playerName.trim(), finalScore);
+	        
+	        // Save the changes to the file immediately (only if saved, but redundant if registrarPuntaje calls it)
+	        // ranking.guardarEnArchivo(); // We assume registrarPuntaje handles the save
+	        
+	        if (scoreWasSaved) {
+	            JOptionPane.showMessageDialog(vistaPanel, 
+	                "¡Puntaje de " + finalScore + " guardado para " + playerName.trim() + "!", 
+	                "Guardado Exitoso", JOptionPane.INFORMATION_MESSAGE);
+	        } else {
+	            // New message for when the score is lower than their existing best
+	             JOptionPane.showMessageDialog(vistaPanel, 
+	                "Tu puntaje (" + finalScore + ") no superó tu récord anterior.", 
+	                "Puntaje No Guardado", JOptionPane.INFORMATION_MESSAGE);
+	        }
+	    } else {
+	        JOptionPane.showMessageDialog(vistaPanel, 
+	            "Puntaje no guardado. Vuelve a intentarlo la próxima vez.", 
+	            "Fin del Juego", JOptionPane.INFORMATION_MESSAGE);
+	    }
+	    
+	    // 4. Transition back to the Main Menu (Required for a clean reset)
+	    // We need the Ventana instance to switch the view.
+	    ControladorJuego.getInstancia().reiniciarJuegoTotal(); 
+	}
+	
+	// Inside ControladorJuego.java (NEW method to facilitate app restart/menu return)
+	public void reiniciarJuegoTotal() {
+		// 1. Reset all critical Model fields
+	    this.puntaje = 0;
+	    this.nivel = 1;
+	    this.vidas = 3;
+	    this.estado = null;
+	    
+	    // 2. Stop the timer and clear models
+	    gameTimer.stop();
+	    this.proyectiles.clear();
+	    this.muros.clear();
+	    
+	    // 3. Clear the game visuals
+	    if (vistaPanel != null) {
+	        vistaPanel.limpiarVista();
+	    }
+	    
+	    // 4. CRITICAL: Trigger the return to the Main Menu (View switch)
+	    Ventana mainFrame = Ventana.getInstancia();
+	    if (mainFrame != null) {
+	        mainFrame.showMenuPanel();
+	    }
+	}
 
 }

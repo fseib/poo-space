@@ -14,8 +14,8 @@ public class ProyectilVista extends JLabel {
 	
 	public ProyectilVista(int modeloId) {
 		this.modeloId = modeloId;
-		ancho = 8;
-		alto = 15;
+		ancho = 4;
+		alto = 9;
 		Image imagen = new ImageIcon("disparo.png").getImage();
 		Image imagenAEscala = imagen.getScaledInstance(ancho, alto, Image.SCALE_SMOOTH);
 		ImageIcon icono = new ImageIcon(imagenAEscala);

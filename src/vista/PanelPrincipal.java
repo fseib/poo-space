@@ -12,7 +12,9 @@ import javax.swing.JPanel;
 
 import controlador.ControladorJuego;
 import modelo.ModeloInvasor;
+import modelo.MuroEnergia;
 import modelo.Proyectiles;
+import modelo.SeccionMuro;
 
 public class PanelPrincipal extends JPanel {
 	/**
@@ -25,17 +27,14 @@ public class PanelPrincipal extends JPanel {
 	private ImagenNave imagenNave;
 	private List<ProyectilVista> proyectiles  = new ArrayList<>();;
 	private List<ImagenInvasor> invasoresVista = new ArrayList<>();
-	
+	private List<ImagenMuro> murosVista = new ArrayList<>();
 	  final int PRO_WIDTH = 8;
       final int PRO_HEIGHT = 15;
       
 	@Override
 	protected void paintComponent(Graphics g) {
-	    super.paintComponent(g); // Draws black background, then components draw themselves.
-	    drawFlashOverlay(g);	
-	    // This code runs *under* the components.
-	    // If you see no flash, it means the color is too close to black, OR
-	    // the problem is with the Controller's logic that triggers the flash.
+	    super.paintComponent(g);
+	    drawFlashOverlay(g);
 	}
 	
 	
@@ -46,23 +45,28 @@ public class PanelPrincipal extends JPanel {
 		setPreferredSize(new Dimension(ancho,alto));
 		imagenNave = new ImagenNave();
 		add(imagenNave);
-		int shipModelX = ControladorJuego.getInstancia().getModeloNave().getX(); // Assuming you add this getter
+		int shipModelX = ControladorJuego.getInstancia().getModeloNave().getX();
 		imagenNave.mover(shipModelX, 500);
 		imagenNave.setFocusable(true);
 	    ControladorJuego.getInstancia().setVista(this); 
-	    ControladorJuego.getInstancia().iniciarJuego();
 		imagenNave.addKeyListener(new MiPropioKeyAdapter() {
 			int x;
 			
 			@Override
 			public void keyTyped(KeyEvent e) {
 				System.out.println(e.getKeyChar());
-				if(e.getKeyChar() == 'a')
-					x = ControladorJuego.getInstancia().moverNaveIzquierda();
+				if(e.getKeyChar() == 'a')	{
+					if(ControladorJuego.getInstancia().getEstado() == "JUGANDO") {
+						x = ControladorJuego.getInstancia().moverNaveIzquierda();
+					}
+				}
+					
 				else
-					if(e.getKeyChar() == 'd')
-						x = ControladorJuego.getInstancia().moverNaveDerecha();
-				
+					if(e.getKeyChar() == 'd'){
+						if(ControladorJuego.getInstancia().getEstado() == "JUGANDO") {
+							x = ControladorJuego.getInstancia().moverNaveDerecha();
+						}
+					}				
 				if(e.getKeyChar() == 'w') {
 					
 					int proyectilId =	ControladorJuego.getInstancia().dispararNave();
@@ -97,20 +101,43 @@ public class PanelPrincipal extends JPanel {
 		});
 	}
 	
+	public void inicializarVistaDeMuros(List<MuroEnergia> murosModel) {
+	    ControladorJuego controller = ControladorJuego.getInstancia();
+	    
+	    // Assuming you have a list of MuroEnergia objects in the Controller
+	    // Loop through each MuroEnergia
+	    for (MuroEnergia muroModel : murosModel) {
+	        // Loop through each SeccionMuro inside the manager
+	        for (SeccionMuro seccionModel : muroModel.getSecciones()) {
+	            ImagenMuro newMuroView = new ImagenMuro(seccionModel); // Link view to model
+	            
+	            // Position the view component
+	            newMuroView.setBounds(seccionModel.getX(), seccionModel.getY(), 
+	                                   seccionModel.getAncho(), seccionModel.getAlto());
+	            
+	            murosVista.add(newMuroView);
+	            add(newMuroView);
+	        }
+	    }
+	    revalidate(); 
+	}
+	
 	public void limpiarVista() {
-	    // 1. Remove all projectiles
 	    for (ProyectilVista pv : proyectiles) {
 	        remove(pv);
 	    }
 	    proyectiles.clear();
 	    
-	    // 2. Remove all invaders
 	    for (ImagenInvasor iv : invasoresVista) {
 	        remove(iv);
 	    }
 	    invasoresVista.clear();
 	    
-	    // 3. Trigger a full panel redraw
+	    for (ImagenMuro sm: murosVista) {
+	    	remove(sm);
+	    }
+	    murosVista.clear();
+	    
 	    revalidate(); 
 	    repaint();
 	}
@@ -199,8 +226,7 @@ public class PanelPrincipal extends JPanel {
 	            
 	            int invaderWidth = 32;  // Assuming invader width
 	            
-	            int offsetX = modelo.esDelJugador() ? 30 : (invaderWidth / 2) - 4; // Center enemy shot (e.g. 30/2 - 4)
-
+	            int offsetX = modelo.esDelJugador() ? 30 : (invaderWidth / 2) - 4; // e.g., 15 - 4 = 11
 	            newPro.setBounds(
 	                modelo.getX() + offsetX,
 	                modelo.getY(), // <-- CRITICAL: Start Y below the invader
@@ -226,7 +252,15 @@ public class PanelPrincipal extends JPanel {
             }
         });
         
-       
+        murosVista.removeIf(im -> {
+            if (im.getModeloSeccion().estaDestruida()) {
+                remove(im);
+                return true;
+            }
+            // Force a redraw of the section to show new damage/color
+            im.repaint(); 
+            return false;
+        });
 
 	    repaint();
 	    revalidate();

@@ -14,17 +14,30 @@ public class Ventana extends JFrame {
 	private PanelPrincipal panelPrincipal;
     private PanelHUD panelHUD; 
  	private PanelMenu panelMenu; // <-- NEW FIELD
+ 	private PanelScores panelScores;
+ 	private static Ventana instancia;
+ 	
+ 	public PanelPrincipal getPanelPrincipal() {
+ 	    return panelPrincipal;
+ 	}
 
+ 	public PanelHUD getPanelHUD() {
+ 	    return panelHUD;
+ 	}
+ 	
  	public Ventana() {
          super("Space Invaders");
  		setDefaultCloseOperation(EXIT_ON_CLOSE);
          setLayout(new BorderLayout()); // Use a primary layout for the frame
          
+         instancia = this;
+         
          // Initialize all panels
  		panelPrincipal = new PanelPrincipal();
          panelHUD = new PanelHUD(); 
          panelMenu = new PanelMenu(); // <-- Initialize Menu
-
+         panelScores = new PanelScores(); // <<< INITIALIZE HERE
+         
          // Game panel setup
  		panelPrincipal.setBackground(Color.BLACK);
          panelPrincipal.setPreferredSize(new Dimension(800, 600)); 
@@ -38,6 +51,10 @@ public class Ventana extends JFrame {
          pack();
  		setVisible(true);
  	}
+ 	
+ 	public static Ventana getInstancia() {
+        return instancia;
+    }
  	
 
  	public void showMenuPanel() {
@@ -74,5 +91,15 @@ public class Ventana extends JFrame {
         
         // Start the game loop AFTER the panels are added
         ControladorJuego.getInstancia().iniciarJuego(); 
+    }
+    
+    public void showScoresPanel() {
+        getContentPane().removeAll();
+        // CRITICAL: Call the displayScores method to load data right before showing
+        panelScores.displayScores(); 
+        add(panelScores, BorderLayout.CENTER);
+        pack();
+        revalidate();
+        repaint();
     }
 }

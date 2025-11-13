@@ -17,8 +17,8 @@ public class Proyectiles {
 		this.posicionX = posicionX;
 		this.esDelJugador = esDelJugador;
 		this.velocidad = velocidad;
-		this.ancho = 8;
-		this.alto = 15;
+		this.ancho =4;
+		this.alto = 9;
 		this.posicionY = posicionY;
 		
 		if(esDelJugador) {
@@ -31,20 +31,16 @@ public class Proyectiles {
 		this.activo = true;
 	}
 	
-	public void actualizar() {
-	    this.posicionY += velocidad;
-	}
-	
 	public int getId() {
-        return id;
+        return this.id;
     }
 	
 	public int getX() {
-		return posicionX;
+		return this.posicionX;
 	}
 	
 	public int getY() {
-		return posicionY;
+		return this.posicionY;
 	}
 	
 	public int getAlto() {
@@ -59,10 +55,16 @@ public class Proyectiles {
 		return this.esDelJugador;
 	}
 	public boolean isActivo() {
-		return activo;
+		return this.activo;
 	}
 	
 	public void desactivar() {
 		this.activo = false;
 	}
+	
+	public void actualizar() {
+	    this.posicionY += velocidad;
+	}
+	
+
 }

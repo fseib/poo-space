@@ -6,11 +6,17 @@ import java.util.Random;
 
 public class Oleada {
 
-	private List<ModeloInvasor> naves = new ArrayList<>(); // <--- Corrected initialization
+	private List<ModeloInvasor> naves = new ArrayList<>();
+	
+//    private final int totalFilas = 5;     
+//    private final int totalColumnas = 10; 
+//    private final int separacion = 50;     
     
-    private final int totalFilas = 5;     
-    private final int totalColumnas = 10; 
-    private final int separacion = 50;     
+    private final int totalFilas = 3;     
+    private final int totalColumnas = 5; 
+    private final int separacion = 70;    
+    
+    
     private  int velocidadHorizontal;
     private  int velocidadCaida;     
     
@@ -21,14 +27,14 @@ public class Oleada {
 
     private AreaDeJuego areaDeJuego; 
     
-    private final Random random = new Random(); // Initialize the random generator
+    private final Random random = new Random();
 
     public Oleada(AreaDeJuego area, int horizontalSpeed, int dropSpeed) {
         this.areaDeJuego = area;
         this.fasesPorFila = new int[totalFilas];
                 
-        this.velocidadHorizontal = horizontalSpeed; // Set directly
-        this.velocidadCaida = dropSpeed;           // Set directly
+        this.velocidadHorizontal = horizontalSpeed;
+        this.velocidadCaida = dropSpeed;
         inicializarOleada();
     }
 
@@ -68,7 +74,7 @@ public class Oleada {
         for (ModeloInvasor invader : naves) {
             if (invader.isActivo()) {
                 if ((invader.getX() + invader.getAncho() >= areaDeJuego.getAncho() - 10 && direccionActual == 1) ||
-                    (invader.getX() <= 10 && direccionActual == -1)) { // Check if within 10 pixels of edge
+                    (invader.getX() <= 10 && direccionActual == -1)) {
                     hitEdge = true;
                     break; 
                 }
@@ -122,7 +128,7 @@ public class Oleada {
         
         // We set a base chance that *any* invader will shoot this frame.
         // 0.005 (0.5%) means a shot is fired on average once every 200 ticks (approx 3 seconds).
-        final double GLOBAL_BASE_CHANCE = 0.025; 
+        final double GLOBAL_BASE_CHANCE = 0.020; 
         
         // Total Chance = Base Chance * Difficulty Factor
         double totalFiringChance = GLOBAL_BASE_CHANCE * difficultyFactor;

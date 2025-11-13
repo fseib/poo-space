@@ -34,6 +34,7 @@ public class ModeloNave {
 	public int getAlto() {
 		return alto;
 	}
+	
 	public int moverIzquierda() {
 		if(this.coordenadaX - this.velocidad > 0)
 			this.coordenadaX -= this.velocidad;

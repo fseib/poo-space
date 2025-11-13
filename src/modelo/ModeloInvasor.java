@@ -16,7 +16,7 @@ public class ModeloInvasor {
 	
 	
 	public ModeloInvasor(int coordenadaX, int coordenadaY,  int type, int row) {
-		this.id = nextId++; // Assign ID
+		this.id = nextId++;
 		this.coordenadaX = coordenadaX;
 		this.coordenadaY = coordenadaY;
 		this.ancho = 40;
@@ -38,15 +38,6 @@ public class ModeloInvasor {
         }
 	}
 	
-	public void mover(int deltaX, int deltaY) {
-        this.coordenadaX += deltaX;
-        this.coordenadaY += deltaY;
-    }
-    
-    public void destruir() {
-        this.activo = false;
-    }
-
 	public int getId() { 
 		return id; 
 	}
@@ -86,4 +77,17 @@ public class ModeloInvasor {
 	public int disparar() {
 		return this.coordenadaX;
 	}
+	
+	 public void destruir() {
+	        this.activo = false;
+	}
+	
+	public void mover(int deltaX, int deltaY) {
+        this.coordenadaX += deltaX;
+        this.coordenadaY += deltaY;
+    }
+    
+   
+
+
 }
